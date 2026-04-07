@@ -5,8 +5,8 @@ import { UploadCloud, FileSpreadsheet, Printer, AlertCircle, CheckCircle2, Calen
 // 核心系統設定與常數
 // ==========================================
 const REQUIRED_HEADERS = {
-  sales: ['客戶編號', '客戶姓名', '銷貨單編號', '商品名稱', '折抵後單價', '出貨數量', '是否為贈品', '金額小計'],
-  returns: ['客戶編號', '客戶姓名', '退換貨單號', '商品名稱', '折抵後單價', '申請退換貨數量', '申請退換貨金額小計']
+  sales: ['客戶編號', '客戶姓名', '銷貨單編號', '商品名稱', '折扣價', '訂購數量', '是否為贈品', '金額小計'],
+  returns: ['客戶編號', '客戶姓名', '退換貨單號', '商品名稱', '折扣價', '申請退換貨數量', '申請退換貨金額小計']
 };
 
 export default function App() {
@@ -144,8 +144,8 @@ export default function App() {
         const amount = parseAmount(row['金額小計']);
         customerMap.get(cID).sales.push({
           ...row,
-          '折抵後單價': parseAmount(row['折抵後單價']),
-          '出貨數量': parseAmount(row['出貨數量']),
+          '折扣價': parseAmount(row['折扣價']),
+          '訂購數量': parseAmount(row['訂購數量']),
           '金額小計': amount
         });
         customerMap.get(cID).totalSales += amount;
@@ -158,7 +158,7 @@ export default function App() {
         const amount = parseAmount(row['申請退換貨金額小計']);
         customerMap.get(cID).returns.push({
           ...row,
-          '折抵後單價': parseAmount(row['折抵後單價']),
+          '折扣價': parseAmount(row['折扣價']),
           '申請退換貨數量': parseAmount(row['申請退換貨數量']),
           '申請退換貨金額小計': amount
         });
@@ -385,7 +385,7 @@ export default function App() {
                         <tr className="bg-gray-100 text-gray-800">
                           <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-36">銷貨單編號</th>
                           <th className="border border-gray-800 py-2 px-3 text-left w-auto">商品名稱</th>
-                          <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折抵後單價</th>
+                          <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折扣價</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-16">數量</th>
                           <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-16">贈品</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-24">金額小計</th>
@@ -401,8 +401,8 @@ export default function App() {
                                   <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top font-medium text-blue-900 whitespace-nowrap">{sale['銷貨單編號']}</td>
                                 )}
                                 <td className="border border-gray-800 py-2 px-3 text-left text-gray-700 break-words">{sale['商品名稱']}</td>
-                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">${formatCurrency(sale['折抵後單價'])}</td>
-                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">{formatCurrency(sale['出貨數量'])}</td>
+                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">${formatCurrency(sale['折扣價'])}</td>
+                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">{formatCurrency(sale['訂購數量'])}</td>
                                 <td className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap">
                                   {isGift(sale['是否為贈品']) && (
                                     <span className="inline-block bg-orange-100 text-orange-800 text-xs px-2 py-0.5 rounded-full font-medium border border-orange-200">
@@ -435,7 +435,7 @@ export default function App() {
                         <tr className="bg-gray-100 text-gray-800">
                           <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-36">退換貨單號</th>
                           <th className="border border-gray-800 py-2 px-3 text-left w-auto">商品名稱</th>
-                          <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折抵後單價</th>
+                          <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折扣價</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">退換貨數量</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-32">金額小計</th>
                         </tr>
@@ -450,7 +450,7 @@ export default function App() {
                                   <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top font-medium text-red-900 whitespace-nowrap">{ret['退換貨單號']}</td>
                                 )}
                                 <td className="border border-gray-800 py-2 px-3 text-left text-gray-700 break-words">{ret['商品名稱']}</td>
-                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">${formatCurrency(ret['折抵後單價'])}</td>
+                                <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">${formatCurrency(ret['折扣價'])}</td>
                                 <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">{formatCurrency(ret['申請退換貨數量'])}</td>
                                 <td className="border border-gray-800 py-2 px-3 text-right text-red-700 whitespace-nowrap font-medium">
                                   -${formatCurrency(ret['申請退換貨金額小計'])}
