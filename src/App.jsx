@@ -5,8 +5,10 @@ import { UploadCloud, FileSpreadsheet, Printer, AlertCircle, CheckCircle2, Calen
 // 核心系統設定與常數
 // ==========================================
 const REQUIRED_HEADERS = {
-  sales: ['客戶編號', '客戶姓名', '銷貨單編號', '商品名稱', '折扣價', '訂購數量', '是否為贈品', '金額小計'],
-  returns: ['客戶編號', '客戶姓名', '退換貨單號', '商品名稱', '折扣價', '申請退換貨數量', '申請退換貨金額小計']
+  // 修改註記：Requirement 2 - 銷貨明細增加「日期」為必要欄位
+  sales: ['日期', '客戶編號', '客戶姓名', '銷貨單編號', '商品名稱', '折扣價', '訂購數量', '是否為贈品', '金額小計'],
+  // 修改註記：Requirement 2 - 銷退單明細增加「日期」為必要欄位
+  returns: ['日期', '客戶編號', '客戶姓名', '退換貨單號', '商品名稱', '折扣價', '申請退換貨數量', '退換貨金額小計']
 };
 
 export default function App() {
@@ -121,8 +123,9 @@ export default function App() {
   // 業務邏輯：資料彙整與報表生成
   // ==========================================
   const generateReport = () => {
-    if (parsedData.sales.length === 0 && parsedData.returns.length === 0) {
-      setErrors(["請至少上傳一份有效且包含數據的 Excel 檔案再生成報表。"]);
+    // 修改註記：Requirement 1 - 改為只檢查銷貨明細，退換貨明細改為非必要(允許為空)
+    if (parsedData.sales.length === 0) {
+      setErrors(["請務必上傳有效且包含數據的「銷貨商品明細」Excel 檔案再生成報表。"]);
       return;
     }
 
@@ -155,12 +158,12 @@ export default function App() {
       parsedData.returns.forEach(row => {
         const cID = row['客戶編號'];
         ensureCustomer(cID, row['客戶姓名']);
-        const amount = parseAmount(row['申請退換貨金額小計']);
+        const amount = parseAmount(row['退換貨金額小計']);
         customerMap.get(cID).returns.push({
           ...row,
           '折扣價': parseAmount(row['折扣價']),
           '申請退換貨數量': parseAmount(row['申請退換貨數量']),
-          '申請退換貨金額小計': amount
+          '退換貨金額小計': amount
         });
         customerMap.get(cID).totalReturns += amount;
       });
@@ -168,14 +171,28 @@ export default function App() {
       let globalTotalSales = 0;
       let globalTotalReturns = 0;
       
+      // 修改註記：Requirement 4 - 建立由日期(舊到新)優先，再由單號(舊到新)的排序邏輯
+      const sortByDateAndId = (a, b, idKey) => {
+        const dateA = new Date(a['日期'] || 0).getTime();
+        const dateB = new Date(b['日期'] || 0).getTime();
+        
+        // 若日期均為有效且不相同，則以日期排序 (由舊到新)
+        if (!isNaN(dateA) && !isNaN(dateB) && dateA !== dateB) {
+          return dateA - dateB;
+        }
+        
+        // 日期相同或無法解析時，退回使用單號字串排序 (由舊到新)
+        return String(a[idKey]).localeCompare(String(b[idKey]));
+      };
+
       const customersList = Array.from(customerMap.values()).map(c => {
         c.netTotal = c.totalSales - c.totalReturns;
         globalTotalSales += c.totalSales;
         globalTotalReturns += c.totalReturns;
 
-        // 內部明細排序 (依單號字串排序)
-        c.sales.sort((a, b) => String(a['銷貨單編號']).localeCompare(String(b['銷貨單編號'])));
-        c.returns.sort((a, b) => String(a['退換貨單號']).localeCompare(String(b['退換貨單號'])));
+        // 修改註記：套用新的雙重排序規則
+        c.sales.sort((a, b) => sortByDateAndId(a, b, '銷貨單編號'));
+        c.returns.sort((a, b) => sortByDateAndId(a, b, '退換貨單號'));
         
         return c;
       });
@@ -276,8 +293,9 @@ export default function App() {
             </div>
 
             <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              {/* 修改註記：Requirement 1 - 標題加上 (選填) 的文字提示 */}
               <h3 className="font-semibold text-gray-700 flex items-center gap-2 mb-3">
-                <UploadCloud className="w-4 h-4" /> 銷退單商品明細
+                <UploadCloud className="w-4 h-4" /> 銷退單商品明細 <span className="text-gray-400 font-normal text-xs">(選填)</span>
               </h3>
               <label className="block w-full cursor-pointer bg-white border border-dashed border-gray-300 hover:border-blue-500 p-3 rounded text-center transition-colors">
                 <span className="text-sm text-gray-600">點擊選擇或拖曳 Excel 檔案</span>
@@ -383,6 +401,8 @@ export default function App() {
                     <table className="w-full border-collapse border border-gray-800">
                       <thead className="table-header-group">
                         <tr className="bg-gray-100 text-gray-800">
+                          {/* 修改註記：Requirement 3 - 第一欄加上「日期」欄位 */}
+                          <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-28">日期</th>
                           <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-36">銷貨單編號</th>
                           <th className="border border-gray-800 py-2 px-3 text-left w-auto">商品名稱</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折扣價</th>
@@ -397,6 +417,10 @@ export default function App() {
                             const span = salesRowSpans[i];
                             return (
                               <tr key={`s-${i}`} className="hover:bg-gray-50" style={{ pageBreakInside: 'avoid' }}>
+                                {/* 修改註記：Requirement 3 - 增加「日期」資料格，與單號相同一起做 RowSpan 合併避免畫面雜亂 */}
+                                {span > 0 && (
+                                  <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top text-gray-700 whitespace-nowrap">{sale['日期']}</td>
+                                )}
                                 {span > 0 && (
                                   <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top font-medium text-blue-900 whitespace-nowrap">{sale['銷貨單編號']}</td>
                                 )}
@@ -416,7 +440,8 @@ export default function App() {
                           })
                         ) : (
                           <tr>
-                            <td colSpan="6" className="border border-gray-800 py-6 text-center text-gray-500 italic">
+                            {/* 修改註記：colSpan 由 6 改為 7 以配合新增的欄位 */}
+                            <td colSpan="7" className="border border-gray-800 py-6 text-center text-gray-500 italic">
                               本期無銷貨紀錄
                             </td>
                           </tr>
@@ -433,6 +458,8 @@ export default function App() {
                     <table className="w-full border-collapse border border-gray-800">
                       <thead className="table-header-group">
                         <tr className="bg-gray-100 text-gray-800">
+                          {/* 修改註記：Requirement 3 - 第一欄加上「日期」欄位 */}
+                          <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-28">日期</th>
                           <th className="border border-gray-800 py-2 px-3 text-center whitespace-nowrap w-36">退換貨單號</th>
                           <th className="border border-gray-800 py-2 px-3 text-left w-auto">商品名稱</th>
                           <th className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap w-20">折扣價</th>
@@ -446,6 +473,10 @@ export default function App() {
                             const span = returnsRowSpans[i];
                             return (
                               <tr key={`r-${i}`} className="hover:bg-gray-50" style={{ pageBreakInside: 'avoid' }}>
+                                {/* 修改註記：Requirement 3 - 增加「日期」資料格 */}
+                                {span > 0 && (
+                                  <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top text-gray-700 whitespace-nowrap">{ret['日期']}</td>
+                                )}
                                 {span > 0 && (
                                   <td rowSpan={span} className="border border-gray-800 py-2 px-3 text-center bg-white align-top font-medium text-red-900 whitespace-nowrap">{ret['退換貨單號']}</td>
                                 )}
@@ -453,14 +484,15 @@ export default function App() {
                                 <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">${formatCurrency(ret['折扣價'])}</td>
                                 <td className="border border-gray-800 py-2 px-3 text-right whitespace-nowrap">{formatCurrency(ret['申請退換貨數量'])}</td>
                                 <td className="border border-gray-800 py-2 px-3 text-right text-red-700 whitespace-nowrap font-medium">
-                                  -${formatCurrency(ret['申請退換貨金額小計'])}
+                                  -${formatCurrency(ret['退換貨金額小計'])}
                                 </td>
                               </tr>
                             );
                           })
                         ) : (
                           <tr>
-                            <td colSpan="5" className="border border-gray-800 py-6 text-center text-gray-500 italic">
+                            {/* 修改註記：Requirement 1 & 3 - 若無資料(未上傳時)將自動顯示此區塊。colSpan 由 5 改為 6 */}
+                            <td colSpan="6" className="border border-gray-800 py-6 text-center text-gray-500 italic">
                               本期無退換貨紀錄
                             </td>
                           </tr>
